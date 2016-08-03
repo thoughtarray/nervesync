@@ -142,17 +142,23 @@ class S6ServiceManager:
 
         return True
 
+    def reload(self):
+        ret = subprocess.call(['s6-svc', '-h', self.service])
+
+        if ret != 0:
+            return False
+
+        return True
+
     def __str__(self):
         return __name__ + ' (' + self.service + ')'
 
 
 class SyncManager:
-    def __init__(self, nerve_a_manager, nerve_b_manager, nerve_a_config_dir, nerve_b_config_dir, nerve_settings):
-        self.nerve_a = nerve_a_manager
-        self.nerve_b = nerve_b_manager
+    def __init__(self, nerve_manager, nerve_config_dir, nerve_settings):
+        self.nerve = nerve_manager
 
-        self.nerve_a_config_dir = nerve_a_config_dir
-        self.nerve_b_config_dir = nerve_b_config_dir
+        self.nerve_config_dir = nerve_config_dir
 
         # TODO: validate nerve_settings
         self.host_ip = nerve_settings['host_ip']
@@ -167,68 +173,25 @@ class SyncManager:
         if not self.syncing:
             self.syncing = True
 
-            a_state, a_time = self.nerve_a.status()
-            b_state, b_time = self.nerve_b.status()
+            state, time = self.nerve.status()
 
             # TODO: to be used for retry logic in conjunction with self.timeout
             # now = time.time()
 
-            # if both are up, restart newer and stop older
-            if a_state == b_state == 'up':
-                if a_time > b_time:
-                    self._write_configs(definition_state, service_state, self.nerve_b_config_dir)
-                    logger.info('restarting nerve-b')
-                    self._try_op(self.nerve_b.restart)
-
-                    time.sleep(1)  # todo: make smarter
-
-                    logger.info('stopping nerve-a')
-                    self._try_op(self.nerve_a.stop)
-
-                else:
-                    self._write_configs(definition_state, service_state, self.nerve_a_config_dir)
-                    logger.info('restarting nerve-a')
-                    self._try_op(self.nerve_a.restart)
-
-                    time.sleep(1)  # todo: make smarter
-
-                    logger.info('stopping nerve-b')
-                    self._try_op(self.nerve_b.stop)
+            # if up, reload
+            if state == 'up':
+                self._write_configs(definition_state, service_state, self.nerve_config_dir)
+                logger.info('reloading nerve')
+                self._try_op(self.nerve.reload)
 
                 self.syncing = False
                 return
 
-            # if bother are down, start one
-            if a_state == b_state == 'down':
-                self._write_configs(definition_state, service_state, self.nerve_a_config_dir)
-                logger.info('starting nerve-a')
-                self._try_op(self.nerve_a.start)
-
-                self.syncing = False
-                return
-
-            # start b, stop a
-            if a_state == 'up':
-                self._write_configs(definition_state, service_state, self.nerve_b_config_dir)
-                logger.info('starting nerve-b')
-                self._try_op(self.nerve_b.start)
-
-                time.sleep(1)  # todo: make smarter
-
-                logger.info('stopping nerve-a')
-                self._try_op(self.nerve_a.stop)
-
-                self.syncing = False
-                return
-
-            # start a, stop b
-            if b_state == 'up':
-                self._write_configs(definition_state, service_state, self.nerve_a_config_dir)
-                logger.info('starting nerve-a')
-                self._try_op(self.nerve_a.start)
-
-                logger.info('stopping nerve-b')
-                self._try_op(self.nerve_b.stop)
+            # if down, start
+            elif state == 'down':
+                self._write_configs(definition_state, service_state, self.nerve_config_dir)
+                logger.info('starting nerve')
+                self._try_op(self.nerve.start)
 
                 self.syncing = False
                 return
@@ -297,16 +260,14 @@ if __name__ == '__main__':
 
     svc_watcher = DockerServiceWatcher(sock_file='/var/run/docker.sock', env_label='sd-env', name_label='sd-name')
 
-    nerve_a = S6ServiceManager('/var/run/s6/services', 'nerve-a')
-    nerve_b = S6ServiceManager('/var/run/s6/services', 'nerve-b')
+    nerve = S6ServiceManager('/var/run/s6/services', 'nerve')
 
     nerve_settings = {
         'host_ip': s['host_ip'],
         'zk_hosts': s['zk_hosts'],
         'zk_path': '/env/{env}/sd/{name}/sd',  # must be in python string format with "env" & "name" named placeholders
     }
-    sync_manager = SyncManager(nerve_a, nerve_b, '/opt/smartstack/nerve/conf.d.a',
-                               '/opt/smartstack/nerve/conf.d.b', nerve_settings)
+    sync_manager = SyncManager(nerve, '/opt/smartstack/nerve/conf.d', nerve_settings)
 
     # Start app
 

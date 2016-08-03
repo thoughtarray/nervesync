@@ -1,19 +1,17 @@
 # Nervesync
 The purpose of this is to detect watch definitions (only Zookeeper at the moment) and services (only Docker at the moment) to reload Nerve in such a way that covered services are still available for service discovery through the SmartStack system.
 
-I am aware that airbnb/nerve has just merged a pull request for dynamic reloads.  A new Nerve release hasn't been created as of writing.  See the nerve-reload branch for experiments with the new, reloadable Nerve.
-
 ## About
 ### Disclaimer
 This project is _not_ production ready and is _not_ tested throughly...yet.
 
 ### Why
-In 2013, AirBnB's [SmartStack: Service Discovery in the Cloud](http://nerds.airbnb.com/smartstack-service-discovery-cloud/) announced the open source projects "Nerve" and "Synapse".  In the article, the authors claimed that they were "considering adding dynamic service registration for Nerve."  It is now 2016 and Nerve does not have any dynamic capabilities.  Each service must be listed in Nerve's config file.  What's worse, Nerve does not have reload capabilities.  Also, restarting the process isn't an option being that it would wipe out all of the ephemeral znodes in Zookeeper (zk hosts).
+In 2013, AirBnB's [SmartStack: Service Discovery in the Cloud](http://nerds.airbnb.com/smartstack-service-discovery-cloud/) announced the open source projects "Nerve" and "Synapse".  In the article, the authors claimed that they were "considering adding dynamic service registration for Nerve."  At the time of writing, Nerve has just accepted a pull request that allows for dynamic config reloads.  The issue of detecting services or service definitions outside of the config file is not supported at the moment.
 
 We considered using Nerve as a sidekick processes to each app, but it seemed wasteful to have so many instances of nerve running.  Also, having an image with Nerve (Ruby environment) in addition to an environment conducive to whatever app we are actually wanting to run would be very fat.  We considered using Nerve as a sidekick container, but that solution has all of the same pitfalls as the sidekick process solution as well as the added complexity of having two containers communicate.
 
 ### Architecture
-Nervesync is a daemon that does 3 things: loads service definitions dynamically, detects changing docker containers marked as apps to be registered, and manages two instances of Nerve.  I know, it does a lot and is highly specific, but it solves a problem—for me at least.
+Nervesync is a daemon that does 3 things: loads service definitions dynamically, detects changing docker containers marked as apps to be registered, and manages the Nerve process.  I know, it does a lot and is highly specific, but it solves a problem—for me at least.
 
 This image uses [S6](http://skarnet.org/software/s6/) (specifically [s6-overlay](https://github.com/just-containers/s6-overlay)) as its supervisor.
 

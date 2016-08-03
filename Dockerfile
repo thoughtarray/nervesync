@@ -14,7 +14,12 @@ RUN apk --update-cache --no-cache add --virtual .build_deps \
     ruby-dev=2.2.4-r0 \
     alpine-sdk=0.4-r3 \
   && mkdir -p /opt/smartstack/nerve \
-  && gem install nerve -v '~> 0.7' --install-dir /opt/smartstack/nerve --no-document \
+  && mkdir -p /tmp/nerve \
+  && git clone -n https://github.com/airbnb/nerve.git /tmp/nerve \
+  && cd /tmp/nerve \
+  && git checkout 47a5872a5edc8ae69cd9a119d1eac56738cda165 \
+  && gem build nerve.gemspec \
+  && gem install nerve-0.7.0.gem --install-dir /opt/smartstack/nerve --no-document \
   && apk del --purge -r .build_deps \
   && rm -rf /tmp/*
 
