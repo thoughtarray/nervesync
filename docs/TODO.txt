@@ -1,0 +1,23 @@
+Don't restart nerve if a service that doesn't have a definition is found
+Nerve needs to watcher multiple environments
+
+Change zookeeper to this
+/env/{env}/sd/[services]
+So that nerve-sync can "pickup" a new environment dynamically
+
+Make logging configurable
+Old logging stuff
+#logger = logging.getLogger('nerve-sync')
+#logger.setLevel(logging.DEBUG)
+# logfile = logging.FileHandler('nervepoke.log')
+# LOG.addHandler(logfile)
+#handler = logging.StreamHandler(sys.stdout)
+#formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+#handler.setFormatter(formatter)
+#logger.addHandler(handler)
+
+Enable config file reads?
+sync retry logic
+
+***Getting host ip: we need it to put the address in ZK via nerve.  I can't figure out how to get this; so we will rely
+    on the ec2metadata service for now D:

@@ -1,0 +1,3 @@
+#!/usr/bin/with-contenv sh
+
+exec nerve -i "`hostname`" -c /opt/smartstack/nerve/config.a.json

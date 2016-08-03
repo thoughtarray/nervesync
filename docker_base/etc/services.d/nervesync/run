@@ -1,0 +1,3 @@
+#!/usr/bin/with-contenv sh
+
+exec nervesync -H "$(echo $HOST_IP)" -z "$(echo $ZK_HOSTS)"
